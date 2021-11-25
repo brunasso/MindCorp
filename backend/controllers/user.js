@@ -2,23 +2,29 @@ import user from "../models/user.js";
 import role from "../models/role.js";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import moment from 'moment';
 
 const registerUser = async(req, res) => {
     if(!req.body.name || !req.body.email || !req.body.password ) return res.status(400).send({message: "Incomplete data."});
 
-    const existingUser = await user.findOne({email: req.body.email});
+    //It checks that email contains lower case in email
+    let email = req.body.email;
+    email = email.toLowerCase()
+    
+    const existingUser = await user.findOne({email: email});
     if(existingUser) return res.status(400).send({message: "User already register."});
 
     const passHash = await bcrypt.hash(req.body.password, 10);
 
-    const roleId = await role.findOne({name: "user"});
+    const roleId = await role.findOne({name: "User"});
     if(!roleId) return res.status(400).send({message: "No role was assigned"})
 
     const userRegister = new user({
         name: req.body.name,
-        email: req.body.email,
+        email: email,
         password: passHash,
-        roleId: roleId._id
+        roleId: roleId._id,
+        dbStatus: true
     })
 
     const result = await userRegister.save();
@@ -32,7 +38,7 @@ const registerUser = async(req, res) => {
                 iat: moment().unix()
             },
             process.env.SK_JWT
-            )
+            ),
         });
     } catch (e) {
         return res.status(400).send({message: "Register error."})
