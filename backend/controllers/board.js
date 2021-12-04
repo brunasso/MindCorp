@@ -1,4 +1,5 @@
 import board from "../models/board.js";
+import user from "../models/user.js";
 
 const saveTask = async (req, res) => {
   if (!req.body.name || !req.body.description)
@@ -9,7 +10,6 @@ const saveTask = async (req, res) => {
     name: req.body.name,
     description: req.body.description,
     taskStatus: "to-do",
-    imageUrl: "NoImage",
   });
 
   const result = await boardSchema.save();
@@ -47,6 +47,33 @@ const deleteTask = async (req, res) => {
 };
 
 
+// Can be the user assigned in task, changed by the admin.
+const changeTaskUser = async(req, res) => {
+  if(!req.body.email || !req.body.name || !req.body.description || !req.body.taskStatus ) return res.status(400).send({ message: "Incomplete data"});
 
+  const existingUser = await user.findOne({email: req.body.email});
+  if(!existingUser) return res.status(400).send({ message: "User doesn't exits" });
 
-export default { saveTask, listTask, updateTask, deleteTask };
+  let newId = "";
+  newId = existingUser._id;
+
+  const newUser = await board.findOne({
+    userId: newId,
+    name: req.body.name,
+    description: req.body.description,
+    taskStatus: "to-do",
+  });
+  if(newUser) return res.status(400).send({message: "You didn't make any changes"});
+
+  const userChanged = await board.findByIdAndUpdate(req.body._id, {
+    userId: newId,
+    name: req.body.name,
+    description: req.body.description,
+    taskStatus: "to-do",
+  });
+  return userChanged ?
+    res.status(200).send({message: "User in task changed"})
+    : res.status(400).send({message: "Error trying to change user in task"});
+}
+
+export default { saveTask, listTask, updateTask, deleteTask, changeTaskUser };
